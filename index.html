@@ -1,0 +1,56 @@
+<html>
+        <head>
+                <script type="text/javascript" charset="utf-8" src="jstat.min.js"></script>
+        </head>
+        <body>
+                <script>
+                        "use strict";
+                        
+                        //column 11 is 'Adjusted Close'
+                        var ticker = 'AAPL';
+                        //sign up to quandl and retrieve you key
+                        var key = '';
+                        var url = 'https://www.quandl.com/api/v1/datasets/WIKI/'+ticker+'.json?column=11&transformation=rdiff'+key;
+                        
+                        function getData(url){
+                                var xmlhttp = new XMLHttpRequest();
+                                xmlhttp.open("GET", url, true);
+                                xmlhttp.setRequestHeader("Content-Type", "application/json");
+        
+                                xmlhttp.onload = function() {
+                                        var result = JSON.parse(this.responseText);
+                                        
+                                        result.data.showData();
+                                        
+                                        result.data
+                                                .map(   function(i){
+                                                                return i[1];
+                                                                })
+                                                .doAnalysis();
+                                        
+                                        xmlhttp.abort();
+                                        }
+                        
+                                xmlhttp.send();
+                                }
+                        
+                        getData(url);
+                        
+                        Array.prototype.showData = function(){
+                                this.forEach(
+                                        function(i){
+                                                document.write(
+                                                        "<div style='width:10em;'><span>"+i[0]+"</span><span style='width:3em;float:right;text-align:right'>"+i[1].toLocaleString()+"</span></div>"
+                                                        );
+                                                }        
+                                        );
+                                }
+                              
+                        Array.prototype.doAnalysis = function(){
+                                console.log( jStat.meddev(this) );
+                                }
+                                
+                        
+                </script>
+        </body>
+</html>
