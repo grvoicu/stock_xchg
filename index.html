@@ -6,15 +6,18 @@
     </head>
 
     <body>
+        <select id="companySelector" onchange="getData()">
+            <option value="FB">Facebook</option>
+            <option value="AAPL">aapl</option>
+        </select></br>
         <div id="chartContainer" width="400" height="400"></div>
         <script>
             "use strict";
 
-            //column 11 is 'Adjusted Close'
-            var ticker = 'AAPL';
             //sign up to quandl and retrieve you key
-            var key = '';
-            var url = 'https://www.quandl.com/api/v1/datasets/WIKI/'+ticker+'.json?column=11&transformation=rdiff'+key;
+            var key = '&api_key=_6y5mT58Zp8ubah543oS';
+            var url = 'https://www.quandl.com/api/v3/datasets/WIKI/'
+
 
             var trendChart = new CanvasJS.Chart("chartContainer", {
                     title: {  text : "Closing Stock Price" },
@@ -27,15 +30,19 @@
                     }
                     )
 
-            function getData(url){
+            function getData() {
+                var column = 4;  // column 4 is 'Close'
+                var comp_elem = document.getElementById("companySelector");
+                var company = comp_elem.options[comp_elem.selectedIndex].value;
+                var company_url = url+company+'/data.json?column_index='+column+key;
                 var xmlhttp = new XMLHttpRequest();
-                xmlhttp.open("GET", url, true);
+                xmlhttp.open("GET", company_url, true);
                 xmlhttp.setRequestHeader("Content-Type", "application/json");
 
                 xmlhttp.onload = function() {
                     var result = JSON.parse(this.responseText);
 
-                    result.data.buildTrendPlot(trendChart);
+                    result.dataset_data.data.buildTrendPlot(trendChart);
                     trendChart.render();
 
                     xmlhttp.abort();
@@ -44,9 +51,10 @@
                 xmlhttp.send();
             }
 
-            getData(url);
+            getData();
 
             Array.prototype.buildTrendPlot = function(chart) {
+                chart.options.data[0].dataPoints = [];
                 this.forEach(
                     function(i) {
                         chart.options.data[0].dataPoints.push( { x: new Date(i[0]), y:i[1] } );
