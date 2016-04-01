@@ -49,7 +49,9 @@
             var calendar;
             var trendChart = new CanvasJS.Chart("chartContainer", {
                     zoomEnabled: true,
-                    title: {  text : "Closing Stock Price" },
+                    title: {  text : "End of Day Stock Trend", fontSize: 16 },
+                    axisX:{ title: "Timeline", titleFontSize: 18, labelFontSize: 14 },
+                    axisY: { title: "Share Price (US $)", titleFontSize: 18, labelFontSize: 14 },
                     data: [
                         {
                             type: "line",
@@ -100,7 +102,7 @@
                 xmlhttp.send();
            }
 
-           function getData(new_flag) {
+           function getData() {
                 var comp_selector = document.getElementById("companySelector");
                 var idx = comp_selector.selectedIndex;
                 if (idx>-1) {
