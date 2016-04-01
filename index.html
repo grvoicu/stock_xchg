@@ -20,14 +20,13 @@
 
     <body onload='init()'>
 
-        <select id='companySelector' onchange='getData()'>
+        <select id='companySelector' onchange='getData()' vsapce=10>
             <option value='_load'>Please wait: loading companies...</option>
-        </select>
-        <div id="chartContainer" width="400" height="400"></div>
-
-        <div id="calendarContainer" style="position:relative;height:250px;">
-            <input type="text" id="startDate">
-            <input type="text" id="endDate">
+        </select><p></p>
+        <div id="calendarContainer" style="position:relative;height:20px;">
+            Start Date: &nbsp;<input type="text" id="startDate" onchange='getData()'>
+            &nbsp;
+            End Date: &nbsp;<input type="text" id="endDate" onchange='getData()'>
         </div>
         <style>
             #startDate,
@@ -37,6 +36,7 @@
                 font-size: 12px;
             }
         </style>
+        <div id="chartContainer" width="400" height="400"></div>
 
         <script>
             "use strict";
@@ -57,8 +57,10 @@
             zip.useWebWorkers = false;
 
             function init() {
-                calendar = new dhtmlXDoubleCalendar(["startDate","endDate"]);
                 getCompanies();
+                calendar = new dhtmlXDoubleCalendar(["startDate","endDate"]);
+                calendar.leftCalendar.attachEvent("onClick",getData);
+                calendar.rightCalendar.attachEvent("onClick",getData);
             }
 
             function getCompanies() {
@@ -103,6 +105,17 @@
                     var company = comp_selector.options[idx].value;
                     var column = 4;  // column 4 is 'Close'
                     var company_url = url+company+'/data.json?column_index='+column+'&'+key;
+                    var start_date = document.getElementById("startDate").value; //calendar.leftCalendar.getFormatedDate("%y-%m-%d");
+                    var end_date = document.getElementById("endDate").value; calendar.rightCalendar.getFormatedDate("%y-%m-%d");
+                    if (start_date) {
+                        //console.log(start_date);
+                        company_url += '&start_date='+start_date;
+                    }
+                    if (end_date) {
+                        //console.log(end_date);
+                        company_url += '&end_date='+end_date;
+                    }
+                    console.log(company_url);
                     var xmlhttp = new XMLHttpRequest();
                     xmlhttp.open("GET", company_url, true);
                     xmlhttp.setRequestHeader("Content-Type", "application/json");
