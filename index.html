@@ -1,57 +1,189 @@
+<!DOCTYPE html>
 <html>
     <head>
+        <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
+        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
         <script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.5.2/jstat.min.js"></script>
         <!--script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script-->
-        <script type="text/javascript" charset="utf-8" src="http://canvasjs.com/assets/script/canvasjs.min.js"></script>
+        <script type="text/javascript" charset="utf-8" src="https://dl.dropboxusercontent.com/u/3318334/vitamin/canvasjs.min.js"></script>
+        <!--script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/canvasjs/1.7.0/canvasjs.js"></script-->
+        <script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/zip.js"></script>
+        <!--script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/deflate.js"></script-->
+        <script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/inflate.js"></script>
+        <!--script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/mime-types.js"></script-->
+        <!--script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/zip-fs.js"></script-->
+        <!--script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/zip-ext.js"></script-->
+        <script type="text/javascript" src="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.js"></script>
+        <script type="text/javascript" src="https://fastcdn.org/Papa-Parse/4.1.2/papaparse.min.js"></script>
+        <link rel="stylesheet" type="text/css" href="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.css">
     </head>
 
-    <body>
-        <select id="companySelector" onchange="getData()">
-            <option value="FB">Facebook</option>
-            <option value="AAPL">aapl</option>
-        </select></br>
+    <body onload='getCompanies()'>
+
+        <select id='companySelector' onchange='getData()'>
+            <option value='_load'>Please wait: loading companies...</option>
+        </select>
         <div id="chartContainer" width="400" height="400"></div>
+
+        <div id="calendarContainer" style="position:relative;height:250px;">
+            <input type="text" id="startDate">
+            <input type="text" id="endDate">
+        </div>
+        <style>
+            #startDate,
+            #endDate {
+                border: 1px solid #909090;
+                font-family: Tahoma;
+                font-size: 12px;
+            }
+        </style>
+
         <script>
             "use strict";
 
             //sign up to quandl and retrieve you key
-            var key = '&api_key=_6y5mT58Zp8ubah543oS';
+            var key = 'api_key=_6y5mT58Zp8ubah543oS';
             var url = 'https://www.quandl.com/api/v3/datasets/WIKI/'
-
+            zip.useWebWorkers = false;
 
             var trendChart = new CanvasJS.Chart("chartContainer", {
+                    zoomEnabled: true,
                     title: {  text : "Closing Stock Price" },
                     data: [
                         {
-                            type: "spline",
+                            type: "line",
                             dataPoints: []
                         }
-                    ]
-                    }
-                    )
+                    ]});
 
-            function getData() {
-                var column = 4;  // column 4 is 'Close'
-                var comp_elem = document.getElementById("companySelector");
-                var company = comp_elem.options[comp_elem.selectedIndex].value;
-                var company_url = url+company+'/data.json?column_index='+column+key;
+            var
+
+            function init() {
+                calendar = new dhtmlXDoubleCalendar(["startDate","endDate"]);
+                getCompanies();
+                getData();
+            }
+
+            function getCompanies() {
+                var list_url = 'https://www.quandl.com/api/v3/databases/WIKI/codes.json?'+key;
                 var xmlhttp = new XMLHttpRequest();
-                xmlhttp.open("GET", company_url, true);
-                xmlhttp.setRequestHeader("Content-Type", "application/json");
-
+                xmlhttp.open("GET", list_url, true);
+                xmlhttp.responseType = "blob";
                 xmlhttp.onload = function() {
-                    var result = JSON.parse(this.responseText);
+                    zip.createReader(new zip.BlobReader(this.response), function(reader) {
 
-                    result.dataset_data.data.buildTrendPlot(trendChart);
-                    trendChart.render();
+                        // get all entries from the zip
+                        reader.getEntries(function(entries) {
+                            if (entries.length) {
+                               // get first entry content as text
+                               entries[0].getData(new zip.TextWriter(), function(text) {
+                                   // close the zip reader
+                                   reader.close(function() {
+                                       // onclose callback
+                                   });
+                                   // text contains the entry data as a String
+                                   fillCompanies(text);
+                               }, function(current, total) {
+                                   // onprogress callback
+                                   //console.log(current + " out of " + total);
+                               }, false /* CRC check */);
+                           }
+                       });
+                   }, function(err_message) {
+                       console.log(err_message);
+                   });
 
-                    xmlhttp.abort();
+                   xmlhttp.abort();
                 }
 
                 xmlhttp.send();
+/*
+                zip.createReader(new zip.HttpReader(list_url), function(reader) {
+
+                    console.log("Reader created");
+
+                    // get all entries from the zip
+                    reader.getEntries(function(entries) {
+                        if (entries.length) {
+
+                           // get first entry content as text
+                           entries[0].getData(new zip.TextWriter(), function(text) {
+                               // text contains the entry data as a String
+                               console.log(text);
+
+                               // close the zip reader
+                               reader.close(function() {
+                                   // onclose callback
+                               });
+
+                           }, function(current, total) {
+                               // onprogress callback
+                           });
+                       }
+                   });
+                 }, function(error) {
+                   // onerror callback
+               }); */
+           }
+
+           function getData() {
+                var comp_selector = document.getElementById("companySelector");
+                var idx = comp_selector.selectedIndex;
+                if (idx>-1) {
+                    var company = comp_selector.options[idx].value;
+                    var column = 4;  // column 4 is 'Close'
+                    var company_url = url+company+'/data.json?column_index='+column+'&'+key;
+                    var xmlhttp = new XMLHttpRequest();
+                    xmlhttp.open("GET", company_url, true);
+                    xmlhttp.setRequestHeader("Content-Type", "application/json");
+
+                    xmlhttp.onload = function() {
+                        var result = JSON.parse(this.responseText);
+
+                        result.dataset_data.data.buildTrendPlot(trendChart);
+                        trendChart.render();
+
+                        xmlhttp.abort();
+                    }
+
+                    xmlhttp.send();
+                }
             }
 
-            getData();
+            function fillCompanies(csv) {
+                //document.write("<select id='companySelector' onchange='getData()'>");
+                var docFrag  = document.createDocumentFragment();
+                var results = Papa.parse(csv, { skipEmptyLines: true } );
+//                    complete : function(results) {
+//                        results.
+//                    }
+//                });
+                var comp_html_list = [];
+                results.data.forEach(function(val) {
+                    var option  = document.createElement("option");
+                    option.text = val[1].slice(0, 1 + val[1].indexOf(')') );
+                    option.value = val[0].substring(5);
+                    //this.add(option);
+                    this.appendChild(option);
+                    //var db_id =
+                    //var name  =
+                    //this.push(name : db_id);
+                    //this +='<option value="'+ db_id + '">' + name + '</option';
+                }, docFrag);
+                var selector = document.getElementById("companySelector");
+                selector.remove(0);
+                selector.appendChild(docFrag);
+                getData();
+                //document.getElementById("companySelector"). innerHTML = comp_html_list;
+ //                   <option value="FB">Facebook</option>
+ //                   <option value="AAPL">aapl</option>
+                //document.write('</select>');
+            }
+
+            //getCompanies();
+            //getData();
+
+            //calendar.show();
 
             Array.prototype.buildTrendPlot = function(chart) {
                 chart.options.data[0].dataPoints = [];
