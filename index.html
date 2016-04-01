@@ -18,7 +18,7 @@
         <link rel="stylesheet" type="text/css" href="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.css">
     </head>
 
-    <body onload='getCompanies()'>
+    <body onload='init()'>
 
         <select id='companySelector' onchange='getData()'>
             <option value='_load'>Please wait: loading companies...</option>
@@ -43,9 +43,8 @@
 
             //sign up to quandl and retrieve you key
             var key = 'api_key=_6y5mT58Zp8ubah543oS';
-            var url = 'https://www.quandl.com/api/v3/datasets/WIKI/'
-            zip.useWebWorkers = false;
-
+            var url = 'https://www.quandl.com/api/v3/datasets/WIKI/';
+            var calendar;
             var trendChart = new CanvasJS.Chart("chartContainer", {
                     zoomEnabled: true,
                     title: {  text : "Closing Stock Price" },
@@ -55,13 +54,11 @@
                             dataPoints: []
                         }
                     ]});
-
-            var
+            zip.useWebWorkers = false;
 
             function init() {
                 calendar = new dhtmlXDoubleCalendar(["startDate","endDate"]);
                 getCompanies();
-                getData();
             }
 
             function getCompanies() {
@@ -97,33 +94,6 @@
                 }
 
                 xmlhttp.send();
-/*
-                zip.createReader(new zip.HttpReader(list_url), function(reader) {
-
-                    console.log("Reader created");
-
-                    // get all entries from the zip
-                    reader.getEntries(function(entries) {
-                        if (entries.length) {
-
-                           // get first entry content as text
-                           entries[0].getData(new zip.TextWriter(), function(text) {
-                               // text contains the entry data as a String
-                               console.log(text);
-
-                               // close the zip reader
-                               reader.close(function() {
-                                   // onclose callback
-                               });
-
-                           }, function(current, total) {
-                               // onprogress callback
-                           });
-                       }
-                   });
-                 }, function(error) {
-                   // onerror callback
-               }); */
            }
 
            function getData() {
@@ -151,39 +121,23 @@
             }
 
             function fillCompanies(csv) {
-                //document.write("<select id='companySelector' onchange='getData()'>");
-                var docFrag  = document.createDocumentFragment();
+                var docFrag = document.createDocumentFragment();
                 var results = Papa.parse(csv, { skipEmptyLines: true } );
-//                    complete : function(results) {
-//                        results.
-//                    }
-//                });
-                var comp_html_list = [];
+
                 results.data.forEach(function(val) {
                     var option  = document.createElement("option");
                     option.text = val[1].slice(0, 1 + val[1].indexOf(')') );
-                    option.value = val[0].substring(5);
-                    //this.add(option);
+                    option.value= val[0].substring(5);
                     this.appendChild(option);
-                    //var db_id =
-                    //var name  =
-                    //this.push(name : db_id);
-                    //this +='<option value="'+ db_id + '">' + name + '</option';
                 }, docFrag);
+
                 var selector = document.getElementById("companySelector");
                 selector.remove(0);
                 selector.appendChild(docFrag);
+                //selector.onchange = getData();
+                //selector.form.addEventListener("change",getData());
                 getData();
-                //document.getElementById("companySelector"). innerHTML = comp_html_list;
- //                   <option value="FB">Facebook</option>
- //                   <option value="AAPL">aapl</option>
-                //document.write('</select>');
             }
-
-            //getCompanies();
-            //getData();
-
-            //calendar.show();
 
             Array.prototype.buildTrendPlot = function(chart) {
                 chart.options.data[0].dataPoints = [];
@@ -193,11 +147,6 @@
                     }
                 );
             }
-
-            Array.prototype.doAnalysis = function() {
-                console.log( jStat.meddev(this) );
-            }
-
 
     </script>
 
