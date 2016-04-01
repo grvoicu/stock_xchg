@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+        <title>Stock Prices Trend</title>
         <script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.5.2/jstat.min.js"></script>
         <!--script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script-->
         <script type="text/javascript" charset="utf-8" src="https://dl.dropboxusercontent.com/u/3318334/vitamin/canvasjs.min.js"></script>
@@ -15,12 +15,11 @@
         <!--script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/zip-ext.js"></script-->
         <script type="text/javascript" src="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.js"></script>
         <script type="text/javascript" src="https://fastcdn.org/Papa-Parse/4.1.2/papaparse.min.js"></script>
-        <script type="text/javascript" src="everpolate.browserified.min.js"></script>
+        <script type="text/javascript" src="https://rawgit.com/BorisChumichev/everpolate/master/everpolate.browserified.min.js"></script>
         <link rel="stylesheet" type="text/css" href="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.css">
     </head>
 
     <body onload='init()'>
-
         <select id='companySelector' onchange='getData()'>
             <option value='_load'>Please wait: loading companies...</option>
         </select><p></p>
@@ -37,7 +36,7 @@
                 font-size: 12px;
             }
         </style>
-        <div id="chartContainer" width="350" height="400"></div><p></p>
+        <div id="chartContainer" width="400" height="400"></div><p></p>
 
         <script>
             "use strict";
@@ -45,19 +44,21 @@
             //sign up to quandl and retrieve you key
             var key = 'api_key=_6y5mT58Zp8ubah543oS';
             var base_url = 'https://www.quandl.com/api/v3/';
-            var db_name = 'EOD';
+            var db_name = 'WIKI';   // EOD or WIKI
             var calendar;
             var trendChart = new CanvasJS.Chart("chartContainer", {
                     zoomEnabled: true,
-                    title: {  text : "End of Day Stock Trend", fontSize: 16 },
-                    axisX:{ title: "Timeline", titleFontSize: 18, labelFontSize: 14 },
+                    title: {  text: "End of Day Stock Price Trend", fontSize: 18 },
+                    axisX: { title: "Timeline", titleFontSize: 18, labelFontSize: 14 },
                     axisY: { title: "Share Price (US $)", titleFontSize: 18, labelFontSize: 14 },
-                    data: [
-                        {
-                            type: "line",
-                            dataPoints: []
-                        }
-                    ]});
+                    legend: { horizontalAlign: "left", // "center" , "right"
+                              verticalAlign: "top",  // "top" , "bottom", "center"
+                              dockInsidePlotArea : true,
+                              fontSize: 15
+                            },
+                    data: [ { type: "line", legendText: 'History', showInLegend: true, dataPoints: [] },
+                            { type: "line", legendText: 'Future', showInLegend: true, dataPoints: [] }
+            ]});
             zip.useWebWorkers = false;
 
             function init() {
@@ -88,7 +89,6 @@
                                    fillCompanies(text);
                                }, function(current, total) {
                                    // onprogress callback
-                                   //console.log(current + " out of " + total);
                                }, false /* CRC check */);
                            }
                        });
@@ -116,7 +116,13 @@
                     xmlhttp.onload = function() {
                         var result = JSON.parse(this.responseText);
 
-                        result.dataset_data.data.buildTrendPlot(trendChart);
+                        /* Use instead of buildHistoryPlot() when no future plot exists
+                        trendChart.options.data[0].dataPoints = result.dataset_data.data.map(function(obj) {
+                            return { x: new Date(obj[0]), y : obj[1] };
+                        }); */
+                        trendChart.options.data[0].dataPoints = [];
+                        trendChart.options.data[1].dataPoints = [];
+                        buildFuturePlot(buildHistoryPlot(result.dataset_data.data));
                         trendChart.render();
 
                         xmlhttp.abort();
@@ -126,6 +132,7 @@
                 }
             }
 
+            // Extract company names and DB_IDs from the received csv file
             function fillCompanies(csv) {
                 var docFrag = document.createDocumentFragment();
                 var results = Papa.parse(csv, { skipEmptyLines: true } );
@@ -137,33 +144,67 @@
                     this.appendChild(option);
                 }, docFrag);
 
+                // Update UI
                 var selector = document.getElementById("companySelector");
                 selector.remove(0);
                 selector.appendChild(docFrag);
                 getData();
             }
 
+            // Update UI chart to display selected time period
             function changePeriod() {
                 var start_date = document.getElementById("startDate").value;
                 var end_date = document.getElementById("endDate").value;
                 if (start_date) {
                     trendChart.options.axisX.minimum = new Date(start_date);
+                } else {
+                    trendChart.options.axisX.minimum = null;
                 }
                 if (end_date) {
                     trendChart.options.axisX.maximum = new Date(end_date);
+                } else {
+                    trendChart.options.axisX.maximum = null;
                 }
                 trendChart.render();
             }
 
-            Array.prototype.buildTrendPlot = function(chart) {
-                chart.options.data[0].dataPoints = [];
-                this.forEach(
-                    function(i) {
-                        chart.options.data[0].dataPoints.push( { x: new Date(i[0]), y:i[1] } );
+            function buildHistoryPlot(data) {
+                // The predictor size controls on how many recent prices the trend is estimated upon
+                var predictor = { size: 60, x: [], y: [] };
+
+                data.forEach( function (val) {
+                    var date = new Date(val[0]);
+                    trendChart.options.data[0].dataPoints.push( { x: date, y:val[1] } );
+
+                    // Save (time,price values) for prediction
+                    if (this.x.length < this.size) {
+                        this.x.push(date.getTime());
+                        this.y.push(val[1]);
                     }
-                );
+                }, predictor);
+
+                return predictor;
             }
 
+            function buildFuturePlot(data) {
+                var future_days = 30;
+                var future = { x:[], y:[], size: future_days };
+                var now = new Date();
+                var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+
+                // Future dates for which to predict prices
+                for (var i = 0; i < future.size; i++) {
+                    future.x.push(now.getTime() + i*24*60*60*1000);
+                }
+
+                var regression = everpolate.linearRegression(data.x, data.y);
+                future.y = regression.evaluate(future.x);
+
+                for (var i = 0; i < future.size; i++) {
+                    var future_point={x: new Date(future.x[i]), y: future.y[i] };
+                    trendChart.options.data[1].dataPoints.push(future_point);
+                }
+            }
     </script>
 
     </body>
