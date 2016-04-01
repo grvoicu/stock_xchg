@@ -15,12 +15,13 @@
         <!--script type="text/javascript" charset="utf-8" src="https://rawgit.com/gildas-lormeau/zip.js/master/WebContent/zip-ext.js"></script-->
         <script type="text/javascript" src="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.js"></script>
         <script type="text/javascript" src="https://fastcdn.org/Papa-Parse/4.1.2/papaparse.min.js"></script>
+        <script type="text/javascript" src="everpolate.browserified.min.js"></script>
         <link rel="stylesheet" type="text/css" href="https://dl.dropboxusercontent.com/u/3318334/vitamin/codebase/dhtmlxcalendar.css">
     </head>
 
     <body onload='init()'>
 
-        <select id='companySelector' onchange='getData()' vsapce=10>
+        <select id='companySelector' onchange='getData()'>
             <option value='_load'>Please wait: loading companies...</option>
         </select><p></p>
         <div id="calendarContainer" style="position:relative;height:20px;">
@@ -43,7 +44,8 @@
 
             //sign up to quandl and retrieve you key
             var key = 'api_key=_6y5mT58Zp8ubah543oS';
-            var url = 'https://www.quandl.com/api/v3/datasets/WIKI/';
+            var base_url = 'https://www.quandl.com/api/v3/';
+            var db_name = 'EOD';
             var calendar;
             var trendChart = new CanvasJS.Chart("chartContainer", {
                     zoomEnabled: true,
@@ -64,7 +66,7 @@
             }
 
             function getCompanies() {
-                var list_url = 'https://www.quandl.com/api/v3/databases/WIKI/codes.json?'+key;
+                var list_url = base_url + 'databases/'+ db_name +'/codes.json?'+key;
                 var xmlhttp = new XMLHttpRequest();
                 xmlhttp.open("GET", list_url, true);
                 xmlhttp.responseType = "blob";
@@ -98,15 +100,15 @@
                 xmlhttp.send();
            }
 
-           function getData() {
+           function getData(new_flag) {
                 var comp_selector = document.getElementById("companySelector");
                 var idx = comp_selector.selectedIndex;
                 if (idx>-1) {
                     var company = comp_selector.options[idx].value;
                     var column = 4;  // column 4 is 'Close'
-                    var company_url = url+company+'/data.json?column_index='+column+'&'+key;
-                    var start_date = document.getElementById("startDate").value; //calendar.leftCalendar.getFormatedDate("%y-%m-%d");
-                    var end_date = document.getElementById("endDate").value; calendar.rightCalendar.getFormatedDate("%y-%m-%d");
+                    var company_url = base_url+'datasets/'+db_name+'/'+company+'/data.json?column_index='+column+'&'+key;
+                    var start_date = document.getElementById("startDate").value;
+                    var end_date = document.getElementById("endDate").value;
                     if (start_date) {
                         //console.log(start_date);
                         company_url += '&start_date='+start_date;
@@ -115,7 +117,6 @@
                         //console.log(end_date);
                         company_url += '&end_date='+end_date;
                     }
-                    console.log(company_url);
                     var xmlhttp = new XMLHttpRequest();
                     xmlhttp.open("GET", company_url, true);
                     xmlhttp.setRequestHeader("Content-Type", "application/json");
@@ -140,7 +141,7 @@
                 results.data.forEach(function(val) {
                     var option  = document.createElement("option");
                     option.text = val[1].slice(0, 1 + val[1].indexOf(')') );
-                    option.value= val[0].substring(5);
+                    option.value= val[0].substring( 1 + val[0].indexOf('/'));
                     this.appendChild(option);
                 }, docFrag);
 
