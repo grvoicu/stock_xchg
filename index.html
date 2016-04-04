@@ -2,7 +2,7 @@
 <html>
     <head>
         <meta http-equiv="Content-Type" content="text/html; charset=UTF-8"/>
-        <title>Stock Prices Trend</title>
+        <title>End-of-Day Share Price Trend</title>
         <script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/jstat/1.5.2/jstat.min.js"></script>
         <!--script type="text/javascript" charset="utf-8" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/1.0.2/Chart.min.js"></script-->
         <script type="text/javascript" charset="utf-8" src="https://dl.dropboxusercontent.com/u/3318334/vitamin/canvasjs.min.js"></script>
@@ -27,7 +27,7 @@
             Start Date: &nbsp;<input type="text" id="startDate" onchange='changePeriod()'>
             &nbsp;
             End Date: &nbsp;<input type="text" id="endDate" onchange='changePeriod()'>
-        </div>
+        </div><p></p>
         <style>
             #startDate,
             #endDate {
@@ -36,7 +36,7 @@
                 font-size: 12px;
             }
         </style>
-        <div id="chartContainer" width="400" height="400"></div><p></p>
+        <div id="chartContainer" width="400" height="400"></div>
 
         <script>
             "use strict";
@@ -48,7 +48,7 @@
             var calendar;
             var trendChart = new CanvasJS.Chart("chartContainer", {
                     zoomEnabled: true,
-                    title: {  text: "End of Day Stock Price Trend", fontSize: 18 },
+                    title: {  text: "End of Day Share Price Trend", fontSize: 18 },
                     axisX: { title: "Timeline", titleFontSize: 18, labelFontSize: 14 },
                     axisY: { title: "Share Price (US $)", titleFontSize: 18, labelFontSize: 14 },
                     legend: { horizontalAlign: "left", // "center" , "right"
@@ -69,7 +69,20 @@
             }
 
             function getCompanies() {
-                var list_url = base_url + 'databases/'+ db_name +'/codes.json?'+key;
+                // var list_url = base_url + 'databases/'+ db_name +'/codes?'+key;
+                // Getting the dataset DB directly from Quandl fails on all browsers except IE11
+                // - maybe incorectly configured CORS?
+                // - workaround: fallback to mirrored copies of the dataset DB
+                var list_url = 'https://dl.dropboxusercontent.com/s/';
+                var dropb_code = { 'EOD' : '1tb8483a9e523mu', 'WIKI' : '40rr5s3ptlperit' };
+                switch (db_name) {
+                    case 'EOD':
+                    case 'WIKI':
+                        list_url += dropb_code[db_name] + '/' + db_name + '-datasets-codes.zip';
+                        break;
+                    default: window.alert('Invalid or not supported QUANDL database: '+db_name);
+                }
+
                 var xmlhttp = new XMLHttpRequest();
                 xmlhttp.open("GET", list_url, true);
                 xmlhttp.responseType = "blob";
